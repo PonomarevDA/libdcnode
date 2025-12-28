@@ -38,7 +38,7 @@ code_style: cpplint cppcheck crlf
 astyle:
 	./scripts/code_style/check_astyle.py src include --astylerc scripts/code_style/astylerc
 cpplint:
-	cpplint src/*.c include/application/*.h include/serialization/*.h include/serialization/*/*/*.h include/serialization/*/*/*/*.h
+	cpplint src/*.cpp include/libdcnode/*.h include/libdcnode/*.hpp
 cppcheck:
 	./scripts/code_style/cppcheck.sh
 crlf:

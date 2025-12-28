@@ -92,8 +92,9 @@ template <typename MessageType>
 class DronecanPeriodicPublisher : public DronecanPublisher<MessageType>
 {
 public:
-    DronecanPeriodicPublisher(float frequency) : DronecanPublisher<MessageType>(),
-                                                 PUB_PERIOD_MS(static_cast<uint32_t>(1000.0f / std::clamp(frequency, 0.001f, 1000.0f))) {};
+    explicit DronecanPeriodicPublisher(float frequency) :
+        DronecanPublisher<MessageType>(),
+        PUB_PERIOD_MS(static_cast<uint32_t>(1000.0f / std::clamp(frequency, 0.001f, 1000.0f))) {};
 
     inline void spinOnce()
     {

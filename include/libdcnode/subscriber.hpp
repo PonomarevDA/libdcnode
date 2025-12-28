@@ -98,8 +98,8 @@ public:
 
     static inline std::array<void *, DRONECAN_MAX_SUBS_NUMBER> instances{};
     static inline MessageType msg = {};
-    void (*user_callback)(const MessageType &){nullptr};
-    bool (*filter)(const MessageType &){nullptr};
+    void (*user_callback)(const MessageType &) = nullptr;
+    bool (*filter)(const MessageType &) = nullptr;
 };
 
 #endif // LIBDCNODE_SUBSCRIBER_HPP_

@@ -277,14 +277,11 @@ static uint8_t uavcanProcessSending()
             canardPopTxQueue(&node.g_canard);
             txf = canardPeekTxQueue(&node.g_canard);
             tx_frames_counter++;
-        }
-        else if (tx_res < 0)
-        {
+        } else if (tx_res < 0) {
             break;
         }
 
-        if ((tx_attempt++) > 20)
-        {
+        if ((tx_attempt++) > 20) {
             break;
         }
     }
@@ -302,9 +299,7 @@ static bool uavcanProcessReceiving(uint32_t crnt_time_ms)
         {
             uint64_t crnt_time_us = crnt_time_ms * 1000UL;
             canardHandleRxFrame(&node.g_canard, &rx_frame, crnt_time_us);
-        }
-        else
-        {
+        } else {
             break;
         }
     }
@@ -376,9 +371,7 @@ static void uavcanProtocolParamGetSetHandle(CanardRxTransfer *transfer)
     if (param_name_length)
     {
         param_idx = params.find(recv_name, param_name_length);
-    }
-    else
-    {
+    } else {
         param_idx = uavcanParamGetSetDecodeIndex(transfer);
     }
 
@@ -401,18 +394,14 @@ static void uavcanProtocolParamGetSetHandle(CanardRxTransfer *transfer)
             params.integer.getMin(param_idx),
             params.integer.getMax(param_idx),
             name);
-    }
-    else if (params.isString(param_idx))
-    {
+    } else if (params.isString(param_idx)) {
         if (set_value_type_tag == PARAM_VALUE_STRING)
         {
             params.string.setValue(param_idx, str_len, val_string);
         }
         const char *str_value = (const char *)params.string.getValue(param_idx);
         len = uavcanParamGetSetMakeStringResponse(resp, str_value, name);
-    }
-    else
-    {
+    } else {
         len = uavcanParamGetSetMakeEmptyResponse(resp);
     }
 
