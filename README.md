@@ -1,185 +1,54 @@
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=PonomarevDA_dronecan_application&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=PonomarevDA_dronecan_application) [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=PonomarevDA_dronecan_application&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=PonomarevDA_dronecan_application) [![build](https://github.com/PonomarevDA/dronecan_application/actions/workflows/build.yml/badge.svg)](https://github.com/PonomarevDA/dronecan_application/actions/workflows/build.yml)  [![check_crlf](https://github.com/PonomarevDA/dronecan_application/actions/workflows/check_crlf.yml/badge.svg)](https://github.com/PonomarevDA/dronecan_application/actions/workflows/check_crlf.yml)
+# libdcnode [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=PonomarevDA_libdcnode&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=PonomarevDA_libdcnode) [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=PonomarevDA_libdcnode&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=PonomarevDA_libdcnode) [![build](https://github.com/PonomarevDA/libdcnode/actions/workflows/build.yml/badge.svg)](https://github.com/PonomarevDA/libdcnode/actions/workflows/build.yml)
 
-# DroneCAN application
+Lightweight [DroneCAN / UAVCAN v0](https://dronecan.github.io/) node toolkit built on top of [libcanard](https://github.com/dronecan/libcanard), [platform_specific](platform_specific) and [libparams](https://github.com/PonomarevDA/libparams). It wraps the transport, exposes a small C API for node setup/spin, and offers C++ helpers for typed publishers/subscribers and logging.
 
-This is a C library with C++ helpers that brings up the [libcanard](https://github.com/dronecan/libcanard), platform-specific drivers and serialization together to build a minimal DroneCAN application.
+## Features
 
-A minimal application includes the following protocol-features:
+- Implements core DroneCAN services out of the box: [NodeStatus](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#nodestatus), [GetNodeInfo](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#getnodeinfo), [Param.GetSet and Param.ExecuteOpcode](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#uavcanprotocolparam), [RestartNode](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#restartnode), and [GetTransportStats](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#gettransportstats).
+- Platform abstraction (`include/libdcnode/platform.hpp`) so you can plug in your own timing, reset, unique-ID, and CAN driver callbacks.
+- Templated C++ wrappers for publishing/subscribing (`include/libdcnode/pub.hpp`, `include/libdcnode/sub.hpp`) with optional filters and periodic senders; legacy interfaces remain in `include/libdcnode/publisher.hpp` and `include/libdcnode/subscriber.hpp`.
+- Debug logger (`include/libdcnode/logger.hpp`) that publishes `uavcan.protocol.debug.LogMessage` with severity helpers.
+- DSDL compiler baked into the build (`Libs/dronecan_dsdlc`) so message code is generated during CMake configure.
 
-| № | type      | message  |
-| - | --------- | -------- |
-| 1 | broadcast | [uavcan.protocol.NodeStatus](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#nodestatus) |
-| 2 | RPC-service | [uavcan.protocol.GetNodeInfo](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#getnodeinfo) |
-| 3 | RPC-service | [uavcan.protocol.param.*](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#uavcanprotocolparam) |
-| 4 | RPC-service | [uavcan.protocol.RestartNode](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#restartnode) |
-| 5 | RPC-service | [uavcan.protocol.GetTransportStats](https://legacy.uavcan.org/Specification/7._List_of_standard_data_types/#gettransportstats) |
+## Prerequisites
 
-The following auxiliary features should be provided as well:
+- C/C++ toolchain with C++17, CMake >= 3.15, Python 3 (for tests/tools).
+- Linux SocketCAN stack and `ip` utilities (used by `scripts/vcan.sh`).
+- `can-utils` (for monitoring) and `dronecan_gui_tool` are handy when playing with the examples.
 
-- [x] actuator
-- [x] airspeed
-- [x] baro
-- [x] circuit status
-- [x] fuel tank
-- [x] esc
-- [x] ice
-- [x] indication
-- [x] power
-- [x] rangefinder
-- [ ] gnss
-- [x] mag
-- [ ] etc
+## Getting started
 
-The library should support the following platforms:
-- [x] Ubuntu: socketcan
-- [x] stm32f103: BXCAN based on platform specific
-- [x] stm32g0: FDCAN based on STM32 HAL
-- [ ] stm32f103: DroneCAN/Serial based on STM32 HAL
-
-## Dependencies
-
-- [libparams](https://github.com/PonomarevDA/libparams) v0.8.4 library.
-- [dronecan/libcanard](https://github.com/dronecan/libcanard)
-
-## How to integrate the library into a project
-
-Add the following lines into CMakeLists.txt of your project:
-
-```cmake
-# 1. libdcnode
-add_subdirectory(${ROOT_DIR} ${CMAKE_BINARY_DIR}/libdcnode)
-
-# 2. libcanver
-set(CAN_PLATFORM socketcan) # Options: bxcan, fdcan or socketcan
-include(${ROOT_DIR}/platform_specific/${CAN_PLATFORM}/config.cmake)
-
-# 3. libparams
-set(LIBPARAMS_PLATFORM    ubuntu) # Options: stm32f103, stm32g0b1, ubuntu
-include(libparams.cmake)
-
-# 4. Application
-add_executable(${PROJECT_NAME}
-    ...
-    ${DRONECAN_PLATFORM_SOURCES}
-    ...
-)
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ...
-    ${DRONECAN_PLATFORM_HEADERS}
-    ...
-)
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    libdcnode::libdcnode
-)
-```
-
-
-## Usage example
-
-**1. Initialize**
-
-Include `dronecan.hpp` header and call `uavcanInitApplication` in the beginning of the application. Call `uavcanSpinOnce` periodically.
-
-```c++
-// Include dronecan.hpp header file
-#include "libdcnode/dronecan.h"
-
-// Initialize the library somewhere
-const uint8_t node_id = 42;
-auto init_res = uavcanInitApplication(node_id);
-if (init_res < 0) {
-    // handle error here
-}
-
-// Spin it periodically:
-while (true) {
-    ...
-    uavcanSpinOnce();
-    ...
-}
-```
-
-**2. Add publisher**
-
-Adding a publisher is very easy. Include `publisher.hpp` header, create an instance of the required publisher and just call `publish` when you need. Here is a BatteryInfo publisher example:
-
-```c++
-#include "libdcnode/dronecan.h"
-#include "libdcnode/publisher.hpp"
-
-// Create an instance of the publisher
-DronecanPublisher<BatteryInfo_t> battery_info_pub;
-
-// Modify the message
-battery_info_pub.msg.voltage = 10.0f;
-
-// Publish the message
-battery_info_pub.publish();
-```
-
-Alternatively, you can create a periodic publisher:
-
-```c++
-const auto PUBLISH_RATE_HZ = 1.0f;
-DronecanPeriodicPublisher<BatteryInfo_t> battery_info_pub(PUBLISH_RATE_HZ);
-
-while (true) {
-    ...
-    battery_info_pub.spinOnce();
-    ...
-}
-```
-
-**3. Add subscriber**
-
-Adding a subscriber is easy as well. Let's consider a RawCommand subscriber example. Include `subscriber.hpp` header, create a callback for your application and instance of the required subscriber, then initilize it.
-
-```c++
-// Include necessary header files
-#include "libdcnode/dronecan.h"
-#include "libdcnode/subscriber.hpp"
-
-// Add a callback handler function
-void rc_callback(const RawCommand_t& msg) {
-    std::cout << "Get RawCommand with " << (int)msg.size << " commands." << std::endl;
-}
-
-// Add the subscription:
-DronecanSubscriber<RawCommand_t> raw_command_sub;
-if (raw_command_sub.init(&rc_callback) < 0) {
-    // handle error
-}
-```
-
-Sometimes for subscriber you want to specify a filter. For example, you may want to subscribe on a specific command channel or sensor ID. Let's consider an ArrayCommand example with filter that will only pass the messages with actuator ID = 0.
-
-```c++
-static const uint8_t FILTER_ACTUATOR_ID = 0;
-
-void ac_callback(const ArrayCommand_t& msg) {
-    std::cout << "Get ArrayCommand_t with " << msg.size << "commands." << std::endl;
-}
-bool ac_filter(const ArrayCommand_t& msg) {
-    for (size_t idx = 0; idx < msg.size; idx++) {
-        if (msg.commands[idx].actuator_id == FILTER_ACTUATOR_ID) {
-            return true;
-        }
-    }
-    return false;
-}
-
-DronecanSubscriber<ArrayCommand_t> array_command_sub;
-array_command_sub.init(&ac_callback, &ac_filter);
-```
-
-**Run example**
-
-You can run a provided example in SITL mode. Just run:
+Set up the Python deps (used by the DSDL generator and tests):
 
 ```bash
-git clone git@github.com:PonomarevDA/dronecan_application.git --recursive
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Then wire the library into your project:
+
+```cmake
+add_subdirectory(libdcnode)
+target_link_libraries(my_app PRIVATE libdcnode::libdcnode)
+```
+
+During configure, DSDL code is generated into `build/generated/libdcnode/serialization` using `Libs/dronecan_dsdlc/dronecan_dsdlc.py`. If you add custom DSDL namespaces, point `DSDL_IN_DIR` (see `CMakeLists.txt`) to your set or rerun `scripts/code_generation.sh` with your paths.
+
+Provide the platform and params hooks from `include/libdcnode/platform.hpp` and `include/libdcnode/params.hpp` in your application; the Ubuntu example shows minimal implementations.
+
+### Ubuntu example (build, link, run)
+
+The `examples/ubuntu` target demonstrates the C API plus the modern C++ pub/sub wrappers end-to-end.
+
+```bash
+# Prepare a virtual CAN iface once (uses sudo):
+scripts/vcan.sh slcan0
+
+# Build and run the example:
 make ubuntu
 ```
+
+What it does: sets `uavcan.node.id` (default 50) and `system.name`, wires platform callbacks (time, restart request, UID, CAN driver) in `examples/ubuntu/main.cpp`, subscribes to `esc.RawCommand`/`actuator.ArrayCommand`/`indication.LightsCommand`, and publishes periodic `equipment.power.CircuitStatus` + `equipment.power.BatteryInfo` while serving NodeStatus/GetNodeInfo.
 
 In gui_tool you will see:
 
@@ -189,39 +58,28 @@ In gui_tool you will see:
 <img src="https://raw.githubusercontent.com/wiki/PonomarevDA/dronecan_application/assets/ubuntu_publisher.gif" alt="drawing">
 
 
-> You can find the provided SITL application in [examples/ubuntu](examples/ubuntu) folder.
+## Testing
 
-## Platform specific notes
-
-There are a few functions that require an implementation. They are declared in [include/application/internal.h](include/application/internal.h).
-
-A user must provide the following function implementation:
-
-```c++
-/**
-  * @return the time in milliseconds since the application started.
-  * @note This function must be provided by a user!
-  */
-uint32_t platformSpecificGetTimeMs();
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+scripts/vcan.sh slcan0  # once, requires sudo
+pytest tests/smoke_socketcan.py
 ```
 
-A user may also provide the implementation of the optional functions. These function have a weak implementation in [src/weak.c](src/weak.c).
+The smoke tests expect the Ubuntu example (node ID 50 on `slcan0`) to be running; they verify `NodeStatus` and `GetNodeInfo` responses via the `dronecan` Python client.
 
-```c++
-/**
-  * @return whether the request will be processed
-  * True  - the application will be restarted soon.
-  * False - the restarted is not supported or can't be handled at the moment.
-  * @note Implementation is recommended, but optional.
-  */
-bool platformSpecificRequestRestart();
+## Changelog
 
-/**
-  * @param[out] out_id - hardware Unique ID
-  * @note Implementation is recommended, but optional.
-  */
-void platformSpecificReadUniqueID(uint8_t out_uid[16]);
-```
+| Version | ReleaseDate | Note |
+| ------- | ------------ | ---- |
+| [v0.7.0](https://github.com/PonomarevDA/libdcnode/tree/v0.7.0) | 2025-12-28 | Added DSDL ser/des generator |
+| [v0.6.0](https://github.com/PonomarevDA/libdcnode/tree/v0.6.0) | 2025-10-17 | Build model changed: standalone library; platform hooks provided by user (no more source-include mode). |
+| [v0.5.0](https://github.com/PonomarevDA/libdcnode/tree/v0.5.0) | 2024-09-26 | Decoupled the platform specific functions from the library |
+| [v0.4.0](https://github.com/PonomarevDA/libdcnode/tree/v0.4.0) | 2024-07-29 | Added macro helpers for pub and sub traits |
+| [v0.3.*](https://github.com/PonomarevDA/libdcnode/tree/v0.3.0) | 2024-01-06 | Incremental serialization additions |
+| [v0.2.0](https://github.com/PonomarevDA/libdcnode/tree/v0.2.0) | 2024-01-06 | Add bxcan and fdcan drivers |
+| [v0.1.0](https://github.com/PonomarevDA/libdcnode/tree/v0.1.0) | 2023-12-22 | First public drop; pure C, manual serialization, and source-include usage (include the C sources into your app). |
 
 ## License
 

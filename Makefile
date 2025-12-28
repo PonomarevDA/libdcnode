@@ -1,5 +1,5 @@
 # Copyright (c) 2023 Dmitry Ponomarev
-# Distributed under the MIT License, available in the file LICENSE.
+# Distributed under the MPL v2.0 License, available in the file LICENSE.
 # Author: Dmitry Ponomarev <ponomarevda96@gmail.com>
 
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))

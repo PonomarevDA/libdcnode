@@ -1,7 +1,9 @@
 /*
-* Copyright (C) 2024 Anastasiia Stepanova <asiiapine@gmail.com>
-* Distributed under the terms of the GPL v3 license, available in the file LICENSE.
-*/
+ * Copyright (C) 2024 Anastasiia Stepanova <asiiapine@gmail.com>
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 
 #include "libdcnode/logger.hpp"
 #include "libdcnode/legacy/uavcan/protocol/debug/LogMessage.h"
