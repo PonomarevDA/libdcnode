@@ -5,7 +5,7 @@ on: [push]
 jobs:
   build_ubuntu:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 6
     strategy:
       matrix:
         target: [ubuntu]
@@ -20,12 +20,19 @@ jobs:
 
       - name: Install
         run: |
-          sudo apt-get install -y make gcc-multilib g++-multilib linux-modules-extra-$(uname -r)
+          sudo apt-get install -y gcc-multilib g++-multilib linux-modules-extra-$(uname -r)
           python3 -m venv .venv && source ".venv/bin/activate"
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      - name: Build and run SITL
+      - name: Build SITL
+        run: |
+          source ".venv/bin/activate"
+          make ${{ matrix.target }}-build
+
+      - name: Run SITL and smoke test
+        timeout-minutes: 3
         run: |
           ./scripts/vcan.sh slcan0
           source ".venv/bin/activate"
-          make ${{ matrix.target }}
+          make ${{ matrix.target }}-run &
+          ./tests/smoke_socketcan.py

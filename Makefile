@@ -6,15 +6,30 @@ ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BUILD_DIR:=$(ROOT_DIR)/build
 BUILD_EXAMPLES_DIR:=$(BUILD_DIR)/src/examples
 
-define build_and_run_sitl
+define build_sitl
 	$(info Build example $(1)...)
 	mkdir -p $(BUILD_EXAMPLES_DIR)/$(1)
 	cd $(BUILD_EXAMPLES_DIR)/$(1) && cmake $(ROOT_DIR)/examples/$(1) && make -s
+endef
+
+define run_sitl
+	$(info Run example $(1)...)
 	$(BUILD_EXAMPLES_DIR)/$(1)/ubuntu
 endef
 
-ubuntu:
-	$(call build_and_run_sitl,ubuntu)
+.PHONY: ubuntu ubuntu-build ubuntu-run
+
+ubuntu-build:
+	$(call build_sitl,ubuntu)
+
+ubuntu-run:
+	@if [ ! -x "$(BUILD_EXAMPLES_DIR)/ubuntu/ubuntu" ]; then \
+		$(MAKE) ubuntu-build; \
+	fi
+	$(call run_sitl,ubuntu)
+
+ubuntu: ubuntu-build
+	$(call run_sitl,ubuntu)
 
 clean:
 	rm -rf build/examples/

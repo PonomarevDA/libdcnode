@@ -47,7 +47,7 @@ add_definitions(-DAPP_VERSION_MAJOR=0)
 add_definitions(-DAPP_VERSION_MINOR=1)
 add_definitions(-DHW_VERSION_MAJOR=0)
 add_definitions(-DHW_VERSION_MINOR=0)
-add_definitions(-DAPP_NODE_NAME="${PROJECT_NAME}")
+add_definitions(-DAPP_NODE_NAME="com.example.libdcnode.sitl")
 
 add_executable(${PROJECT_NAME}
     main.cpp
