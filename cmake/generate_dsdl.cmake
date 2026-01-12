@@ -1,6 +1,7 @@
 # Copyright (c) 2025 Dmitry Ponomarev
 # Distributed under the MPL v2.0 License, available in the file LICENSE.
 # Author: Dmitry Ponomarev <ponomarevda96@gmail.com>
+# Author: Ilia Kliantsevich <iliawork112005@gmail.com>
 
 cmake_minimum_required(VERSION 3.15.3)
 
