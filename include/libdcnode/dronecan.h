@@ -23,7 +23,7 @@ extern "C"
 #endif
 
 #ifndef DRONECAN_MAX_SUBS_NUMBER
-#define DRONECAN_MAX_SUBS_NUMBER 10
+#define DRONECAN_MAX_SUBS_NUMBER 15
 #endif
 
   typedef struct

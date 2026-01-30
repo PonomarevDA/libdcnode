@@ -190,22 +190,23 @@ int main()
         std::cout << "CAN interface could not be found. Exit with code " << init_res << std::endl;
         return init_res;
     }
-
+    uint8_t sub_init = 0;
+    uint8_t sub_fail = 0; 
     libdcnode::DronecanSub<uavcan_equipment_indication_LightsCommand> lights_command_sub;
-    lights_command_sub.init(&lights_callback);
+    lights_command_sub.init(&lights_callback) >= 0 ? sub_init++ : sub_fail++;
 
     libdcnode::DronecanSub<uavcan_equipment_actuator_ArrayCommand> array_command_sub1;
-    array_command_sub1.init(&ac1_callback, &ac1_filter);
+    array_command_sub1.init(&ac1_callback, &ac1_filter) >= 0 ? sub_init++ : sub_fail++;
 
     libdcnode::DronecanSub<uavcan_equipment_actuator_ArrayCommand> array_command_sub2;
-    array_command_sub2.init(&ac2_callback, &ac2_filter);
+    array_command_sub2.init(&ac2_callback, &ac2_filter)>= 0 ? sub_init++ : sub_fail++;
 
     libdcnode::DronecanSub<uavcan_equipment_esc_RawCommand> raw_command_sub1;
-    raw_command_sub1.init(&rc1_callback);
+    raw_command_sub1.init(&rc1_callback)>= 0 ? sub_init++ : sub_fail++;
 
     libdcnode::DronecanSub<uavcan_equipment_esc_RawCommand> raw_command_sub2;
-    raw_command_sub2.init(&rc2_callback);
-
+    raw_command_sub2.init(&rc2_callback) >= 0 ? sub_init++ : sub_fail++; 
+    std::cout<< "Subs initialized: " << sub_init << ". Subs failed: "<<sub_fail;
     libdcnode::DronecanPeriodicPub<uavcan_equipment_power_CircuitStatus> circuit_status(2.0f);
     libdcnode::DronecanPeriodicPub<uavcan_equipment_power_BatteryInfo> battery_info(1.0f);
 

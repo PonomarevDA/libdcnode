@@ -61,12 +61,20 @@ namespace libdcnode
     {
     public:
         DronecanSub() = default;
-
-        int8_t init(void (*callback)(const MessageType &), bool (*filter_)(const MessageType &) = nullptr)
+        /*
+        * @brief User must process result of function to ensure that callback is properly registered. 
+        * @param callback User-defined function to be called upon message reception.
+        * @param filter Optional user-defined function to filter messages.
+        * @return Subscription ID on success, negative error code on failure.
+        */
+        [[nodiscard]] int8_t init(void (*callback)(const MessageType &), bool (*filter_)(const MessageType &) = nullptr)
         {
             user_callback = callback;
             filter = filter_;
             auto sub_id = DronecanSubscriberTraits<MessageType>::subscribe(transfer_callback);
+            if (sub_id < 0) {
+                return sub_id;
+            }
             instances[sub_id] = this;
             return sub_id;
         }

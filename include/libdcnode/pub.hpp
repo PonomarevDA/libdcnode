@@ -62,6 +62,9 @@ namespace libdcnode
     LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_ahrs_MagneticFieldStrength2,
                                 UAVCAN_EQUIPMENT_AHRS_MAGNETICFIELDSTRENGTH2)
     LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_camera_gimbal_Status, UAVCAN_EQUIPMENT_CAMERA_GIMBAL_STATUS)
+    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_actuator_Status, UAVCAN_EQUIPMENT_ACTUATOR_STATUS)
+    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_esc_Status, UAVCAN_EQUIPMENT_ESC_STATUS)
+    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_hardpoint_Status, UAVCAN_EQUIPMENT_HARDPOINT_STATUS)
 
     template <typename MessageType>
     class DronecanPub

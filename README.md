@@ -36,6 +36,7 @@ During configure, DSDL code is generated into `build/generated/libdcnode/seriali
 
 Provide the platform and params hooks from `include/libdcnode/platform.hpp` and `include/libdcnode/params.hpp` in your application; the Ubuntu example shows minimal implementations.
 
+Number of subscribers is limited by parameter `DRONECAN_MAX_SUBS_NUMBER` in file `include/libdcnode/dronecan.h` to 15. You may modify this parameter for further development, however note that size of each subscriber is limited to 16 or 24 bytes depending on 32 or 64 bit device.
 ### Ubuntu example (build, link, run)
 
 The `examples/ubuntu` target demonstrates the C API plus the modern C++ pub/sub wrappers end-to-end.
