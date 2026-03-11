@@ -12,6 +12,7 @@
 #include "libdcnode/legacy/uavcan/protocol/restart_node.h"
 #include "libdcnode/legacy/uavcan/protocol/param/execute_opcode.h"
 #include "libdcnode/legacy/uavcan/protocol/param/getset.h"
+#include "uavcan.protocol.file.BeginFirmwareUpdate.h"
 #include "libdcnode/can_driver.h"
 #include "libdcnode/platform.hpp"
 
@@ -92,6 +93,7 @@ static void uavcanParamExecuteOpcodeHandle(CanardRxTransfer *transfer);
 static void uavcanProtocolRestartNodeHandle(CanardRxTransfer *transfer);
 static void uavcanProtocolGetTransportStatHandle(CanardRxTransfer *transfer);
 static void uavcanProtocolNodeStatusHandle(CanardRxTransfer *transfer);
+static void uavcanProtocolBeginFirmwareUpdateHandle(CanardRxTransfer *transfer);
 
 int8_t uavcanSubscribe(uint64_t signature, uint16_t id, void (*callback)(CanardRxTransfer *))
 {
@@ -454,6 +456,17 @@ static void uavcanProtocolNodeStatusHandle(CanardRxTransfer *transfer)
     }
 }
 
+static void uavcanProtocolBeginFirmwareUpdateHandle(CanardRxTransfer *transfer)
+{
+    if (transfer == NULL || transfer->transfer_type != CanardRequest)
+    {
+        return;
+    }
+
+    // Do not send a response intentionally; just force a reboot so the bootloader takes over.
+    (void)platform.requestRestart();
+}
+
 int16_t uavcanInitApplication(ParamsApi params_api, PlatformApi platform_api, const AppInfo *app_info)
 {
     if (app_info)
@@ -500,6 +513,9 @@ int16_t uavcanInitApplication(ParamsApi params_api, PlatformApi platform_api, co
     uavcanSubscribe(UAVCAN_PROTOCOL_RESTART_NODE, uavcanProtocolRestartNodeHandle);
     uavcanSubscribe(UAVCAN_PROTOCOL_GET_TRANSPORT_STATS, uavcanProtocolGetTransportStatHandle);
     uavcanSubscribe(UAVCAN_PROTOCOL_NODE_STATUS, uavcanProtocolNodeStatusHandle);
+    uavcanSubscribe(UAVCAN_PROTOCOL_FILE_BEGINFIRMWAREUPDATE_SIGNATURE,
+                    UAVCAN_PROTOCOL_FILE_BEGINFIRMWAREUPDATE_ID,
+                    uavcanProtocolBeginFirmwareUpdateHandle);
 
     return 0;
 }
