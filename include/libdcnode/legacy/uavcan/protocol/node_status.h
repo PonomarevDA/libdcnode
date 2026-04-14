@@ -44,7 +44,7 @@ typedef struct {
 #define UAVCAN_PROTOCOL_NODE_STATUS_ID                              341
 #define UAVCAN_PROTOCOL_NODE_STATUS_SIGNATURE                       0x0f0868d0c1a7c6f1
 #define UAVCAN_PROTOCOL_NODE_STATUS_MESSAGE_SIZE                    7
-#define NODE_STATUS_SPIN_PERIOD_MS                                  500
+#define NODE_STATUS_SPIN_PERIOD_MS                                  1000
 #define UAVCAN_PROTOCOL_NODE_STATUS     UAVCAN_EXPAND(UAVCAN_PROTOCOL_NODE_STATUS)
 
 #ifdef __cplusplus
