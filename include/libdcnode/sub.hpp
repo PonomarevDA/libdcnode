@@ -48,6 +48,8 @@ namespace libdcnode
 
     LIBDCNODE_DEFINE_SUB_TRAITS(::uavcan_equipment_hardpoint_Command,
                                 UAVCAN_EQUIPMENT_HARDPOINT_COMMAND)
+    LIBDCNODE_DEFINE_SUB_TRAITS(::uavcan_equipment_hardpoint_Status,
+                                UAVCAN_EQUIPMENT_HARDPOINT_STATUS)
     LIBDCNODE_DEFINE_SUB_TRAITS(::uavcan_equipment_indication_LightsCommand, UAVCAN_EQUIPMENT_INDICATION_LIGHTSCOMMAND)
     LIBDCNODE_DEFINE_SUB_TRAITS(::uavcan_equipment_actuator_ArrayCommand, UAVCAN_EQUIPMENT_ACTUATOR_ARRAYCOMMAND)
     LIBDCNODE_DEFINE_SUB_TRAITS(::uavcan_equipment_camera_gimbal_AngularCommand,
