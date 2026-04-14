@@ -1,4 +1,5 @@
 .vscode/
 build/
 .venv
+.codex
 __pycache__/
