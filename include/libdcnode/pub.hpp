@@ -72,7 +72,6 @@ namespace libdcnode
                                 UAVCAN_EQUIPMENT_AIR_DATA_STATICPRESSURE)
     LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_range_sensor_Measurement,
                                 UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::ardupilot_equipment_power_BatteryInfoAux, ARDUPILOT_EQUIPMENT_POWER_BATTERYINFOAUX)
 
     template <typename MessageType>
     class DronecanPub
