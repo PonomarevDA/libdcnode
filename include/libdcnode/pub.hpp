@@ -19,7 +19,7 @@
 // Max encoded message size (bytes) for publisher stack buffer.
 // Override via -DLIBDCNODE_MAX_PUB_MESSAGE_SIZE=... if your DSDL set requires more.
 #ifndef LIBDCNODE_MAX_PUB_MESSAGE_SIZE
-#define LIBDCNODE_MAX_PUB_MESSAGE_SIZE 250U
+#define LIBDCNODE_MAX_PUB_MESSAGE_SIZE 600U
 #endif
 
 // Initial delay before first publish after boot/reset (ms).
@@ -67,6 +67,7 @@ namespace libdcnode
     LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_actuator_Status, UAVCAN_EQUIPMENT_ACTUATOR_STATUS)
     LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_esc_Status, UAVCAN_EQUIPMENT_ESC_STATUS)
     LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_hardpoint_Status, UAVCAN_EQUIPMENT_HARDPOINT_STATUS)
+    LIBDCNODE_DEFINE_PUB_TRAITS(::ardupilot_equipment_power_BatteryInfoAux, ARDUPILOT_EQUIPMENT_POWER_BATTERYINFOAUX)
     LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_air_data_StaticPressure,
                                 UAVCAN_EQUIPMENT_AIR_DATA_STATICPRESSURE)
     LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_range_sensor_Measurement,

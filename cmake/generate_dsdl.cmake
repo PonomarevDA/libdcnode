@@ -22,7 +22,7 @@ endif()
 if(_run_dsdlc)
     message(STATUS "Generating DSDL sources into: ${DSDL_OUT_DIR}")
     execute_process(
-        COMMAND ${DSDL_COMPILER} -O ${DSDL_OUT_DIR} ${DSDL_IN_DIR}
+        COMMAND ${DSDL_COMPILER} -O ${DSDL_OUT_DIR} ${DSDL_IN_DIRS}
         RESULT_VARIABLE ret
     )
     if(NOT ret EQUAL 0)
