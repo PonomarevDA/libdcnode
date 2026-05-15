@@ -31,6 +31,8 @@ extern "C"
 
     int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx);
 
+    void canDriverSetInterfaceName(const char *interface_name);
+
     int16_t canDriverReceive(CanardCANFrame *const rx_frame, uint8_t can_driver_idx);
 
     int16_t canDriverTransmit(const CanardCANFrame *const tx_frame, uint8_t can_driver_idx);

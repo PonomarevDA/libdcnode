@@ -15,6 +15,12 @@
 SocketCANInstance socket_can_instance;
 const char* can_iface_name = SOCKETCAN_INTERFACE_NAME;
 
+void canDriverSetInterfaceName(const char* interface_name) {
+    if (interface_name != NULL && interface_name[0] != '\0') {
+        can_iface_name = interface_name;
+    }
+}
+
 int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx) {
     (void)can_speed;
     (void)can_driver_idx;

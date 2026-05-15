@@ -9,6 +9,10 @@
 #include "canard_stm32.h"
 #include "main.h"
 
+void canDriverSetInterfaceName(const char* interface_name) {
+    (void)interface_name;
+}
+
 int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx) {
     (void)can_driver_idx;
     CanardSTM32CANTimings timings;

@@ -33,6 +33,9 @@ static CanDriver driver[NUM_OF_CAN_BUSES] = {
 #endif
 };
 
+void canDriverSetInterfaceName(const char* interface_name) {
+    (void)interface_name;
+}
 
 int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx) {
     (void)can_speed;
