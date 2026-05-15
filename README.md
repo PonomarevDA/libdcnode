@@ -74,7 +74,9 @@ The smoke tests expect the Ubuntu example (node ID 50 on `slcan0`) to be running
 
 | Version | ReleaseDate | Note |
 | ------- | ------------ | ---- |
-| [v0.7.0](https://github.com/PonomarevDA/libdcnode/tree/v0.7.0) | 2025-12-28 | Added DSDL ser/des generator |
+| [v0.9.0](https://github.com/PonomarevDA/libdcnode/tree/v0.9.0) | 2026-05-15 | Added runtime SocketCAN interface selection and extended generated DSDL support. |
+| [v0.8.*](https://github.com/PonomarevDA/libdcnode/tree/v0.8.0) | 2026-03-12 | Added firmware update support, expanded typed pub/sub helpers, and fixed `NodeStatus` publication rate from 2 Hz to 1 Hz. |
+| [v0.7.*](https://github.com/PonomarevDA/libdcnode/tree/v0.7.0) | 2025-12-28 | Added generated DSDL serialization and fixed regeneration/recompilation handling. |
 | [v0.6.0](https://github.com/PonomarevDA/libdcnode/tree/v0.6.0) | 2025-10-17 | Build model changed: standalone library; platform hooks provided by user (no more source-include mode). |
 | [v0.5.0](https://github.com/PonomarevDA/libdcnode/tree/v0.5.0) | 2024-09-26 | Decoupled the platform specific functions from the library |
 | [v0.4.0](https://github.com/PonomarevDA/libdcnode/tree/v0.4.0) | 2024-07-29 | Added macro helpers for pub and sub traits |
