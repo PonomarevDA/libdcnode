@@ -8,7 +8,10 @@ project(libdcnode VERSION 0.6.0 LANGUAGES C CXX)
 #
 # 1. Generate DSDL
 #
-set(DSDL_IN_DIR  "${CMAKE_CURRENT_LIST_DIR}/Libs/DSDL/uavcan")
+set(DSDL_IN_DIRS 
+    "${CMAKE_CURRENT_LIST_DIR}/Libs/DSDL/uavcan"
+    "${CMAKE_CURRENT_LIST_DIR}/Libs/DSDL/ardupilot"
+)
 set(DSDL_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/libdcnode/serialization")
 set(DSDL_COMPILER "${CMAKE_CURRENT_LIST_DIR}/Libs/dronecan_dsdlc/dronecan_dsdlc.py")
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/generate_dsdl.cmake)
