@@ -67,7 +67,7 @@ typedef struct
 #if UINTPTR_MAX == 0xFFFFFFFF
 #define INSTANCE_SIZE (216 + CANARD_BUFFER_SIZE + DRONECAN_MAX_SUBS_NUMBER * sizeof(Subscriber_t))
 #elif UINTPTR_MAX == 0xFFFFFFFFFFFFFFFF
-#define INSTANCE_SIZE (256 + CANARD_BUFFER_SIZE + DRONECAN_MAX_SUBS_NUMBER * sizeof(Subscriber_t))
+#define INSTANCE_SIZE (264 + CANARD_BUFFER_SIZE + DRONECAN_MAX_SUBS_NUMBER * sizeof(Subscriber_t))
 #else
 #error "Unknown pointer size or unsupported platform"
 #endif
