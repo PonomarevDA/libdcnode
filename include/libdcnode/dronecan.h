@@ -35,6 +35,7 @@ extern "C"
     uint8_t sw_version_minor;
     uint8_t hw_version_major;
     uint8_t hw_version_minor;
+    uint64_t image_crc;
   } AppInfo;
 
   /**

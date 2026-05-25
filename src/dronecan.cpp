@@ -65,7 +65,7 @@ typedef struct
 } DronecanNodeInstance;
 
 #if UINTPTR_MAX == 0xFFFFFFFF
-#define INSTANCE_SIZE (208 + CANARD_BUFFER_SIZE + DRONECAN_MAX_SUBS_NUMBER * sizeof(Subscriber_t))
+#define INSTANCE_SIZE (216 + CANARD_BUFFER_SIZE + DRONECAN_MAX_SUBS_NUMBER * sizeof(Subscriber_t))
 #elif UINTPTR_MAX == 0xFFFFFFFFFFFFFFFF
 #define INSTANCE_SIZE (256 + CANARD_BUFFER_SIZE + DRONECAN_MAX_SUBS_NUMBER * sizeof(Subscriber_t))
 #else
@@ -477,6 +477,9 @@ int16_t uavcanInitApplication(ParamsApi params_api, PlatformApi platform_api, co
         node.sw_version.minor = app_info->sw_version_minor;
         node.hw_version.major = app_info->hw_version_major;
         node.hw_version.minor = app_info->hw_version_minor;
+
+        node.sw_version.image_crc = app_info->image_crc;
+        node.sw_version.optional_field_flags = 3;
     }
 
     platform = platform_api;

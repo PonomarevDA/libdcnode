@@ -182,6 +182,7 @@ int main()
         .sw_version_minor = APP_VERSION_MINOR,
         .hw_version_major = HW_VERSION_MAJOR,
         .hw_version_minor = HW_VERSION_MINOR,
+        .image_crc = 0U,
     };
 
     auto init_res = uavcanInitApplication(params_api, platform_api, &app_info);

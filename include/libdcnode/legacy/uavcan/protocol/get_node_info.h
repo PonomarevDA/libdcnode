@@ -24,8 +24,8 @@ typedef struct {
     uint32_t vcs_commit;
     uint8_t major;
     uint8_t minor;
-    ///< uint8_t optional_field_flags;
-    ///< uint64_t image_crc;
+    uint8_t optional_field_flags;
+    uint64_t image_crc;
 } SoftwareVersion;
 
 typedef struct {
@@ -53,13 +53,16 @@ static inline uint16_t uavcanEncodeParamGetNodeInfo(
     // 1. NodeStatus status. 7 bytes
     uavcanEncodeNodeStatus(buffer, status);
 
+
     // 2. SoftwareVersion software_version. 15 bytes
     buffer[7] = software->major;
     buffer[8] = software->minor;
-    buffer[9] = 1;                              ///< optional_field_flags, VCS commit is set
+    buffer[9] = software->optional_field_flags;
     uint32_t u32 = software->vcs_commit;
     canardEncodeScalar(buffer, 80, 32, &u32);
-    memset(buffer + 14, 0x00, 8);    ///< uint64 image_crc
+    uint64_t u64 = software->image_crc;
+    canardEncodeScalar(buffer, 112, 64, &u64);
+    // memset(buffer + 14, 0x00, 8);    ///< uint64 image_crc
 
     // 3. HardwareVersion hardware_version. 18 bytes
     buffer[22] = hardware->major;
