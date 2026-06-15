@@ -29,20 +29,18 @@ typedef struct {
     size_t err_counter;
     size_t tx_counter;
     size_t rx_counter;
-    HAL_StatusTypeDef last_tx_status;
-    HAL_StatusTypeDef last_init_status;
 } CanDriver;
 
 static CanDriver driver[NUM_OF_CAN_BUSES] = {
 #if DRONECAN_FDCAN_PRIMARY == 2
-    {.handler = &hfdcan2, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0, .last_tx_status = HAL_OK, .last_init_status = HAL_OK},
+    {.handler = &hfdcan2, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0},
 #if NUM_OF_CAN_BUSES >= 2
-    {.handler = &hfdcan1, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0, .last_tx_status = HAL_OK, .last_init_status = HAL_OK}
+    {.handler = &hfdcan1, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0}
 #endif
 #else
-    {.handler = &hfdcan1, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0, .last_tx_status = HAL_OK, .last_init_status = HAL_OK},
+    {.handler = &hfdcan1, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0},
 #if NUM_OF_CAN_BUSES >= 2
-    {.handler = &hfdcan2, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0, .last_tx_status = HAL_OK, .last_init_status = HAL_OK}
+    {.handler = &hfdcan2, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0}
 #endif
 #endif
 };
@@ -65,19 +63,19 @@ int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx) {
     driver[can_driver_idx].tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
     driver[can_driver_idx].tx_header.MessageMarker = 0;
 
-    driver[can_driver_idx].last_init_status = HAL_FDCAN_ConfigGlobalFilter(
+    HAL_StatusTypeDef res = HAL_FDCAN_ConfigGlobalFilter(
         driver[can_driver_idx].handler,
         FDCAN_ACCEPT_IN_RX_FIFO0,
         FDCAN_ACCEPT_IN_RX_FIFO0,
         FDCAN_REJECT_REMOTE,
         FDCAN_REJECT_REMOTE);
-    if (driver[can_driver_idx].last_init_status != HAL_OK) {
+    if (res != HAL_OK) {
         driver[can_driver_idx].err_counter++;
         return -1;
     }
 
-    driver[can_driver_idx].last_init_status = HAL_FDCAN_Start(driver[can_driver_idx].handler);
-    if (driver[can_driver_idx].last_init_status != HAL_OK) {
+    res = HAL_FDCAN_Start(driver[can_driver_idx].handler);
+    if (res != HAL_OK) {
         driver[can_driver_idx].err_counter++;
         return -1;
     }
@@ -116,11 +114,11 @@ int16_t canDriverTransmit(const CanardCANFrame* const tx_frame, uint8_t can_driv
     driver[can_driver_idx].tx_header.Identifier = tx_frame->id & CANARD_CAN_EXT_ID_MASK;
     driver[can_driver_idx].tx_header.DataLength = tx_frame->data_len;
 
-    driver[can_driver_idx].last_tx_status = HAL_FDCAN_AddMessageToTxFifoQ(
+    HAL_StatusTypeDef res = HAL_FDCAN_AddMessageToTxFifoQ(
         driver[can_driver_idx].handler,
         &driver[can_driver_idx].tx_header,
         (uint8_t*)tx_frame->data);
-    if (driver[can_driver_idx].last_tx_status == HAL_OK) {
+    if (res == HAL_OK) {
         driver[can_driver_idx].tx_counter++;
         return 1;
     } else {
@@ -148,68 +146,4 @@ uint64_t canDriverGetErrorCount() {
 
 uint64_t canDriverGetRxOverflowCount() {
     return 0;
-}
-
-extern "C" uint64_t canDriverGetTxCount(uint8_t can_driver_idx) {
-    return (can_driver_idx < NUM_OF_CAN_BUSES) ? driver[can_driver_idx].tx_counter : 0;
-}
-
-extern "C" uint64_t canDriverGetRxCount(uint8_t can_driver_idx) {
-    return (can_driver_idx < NUM_OF_CAN_BUSES) ? driver[can_driver_idx].rx_counter : 0;
-}
-
-extern "C" int32_t canDriverGetLastTxStatus(uint8_t can_driver_idx) {
-    return (can_driver_idx < NUM_OF_CAN_BUSES) ? driver[can_driver_idx].last_tx_status : -1;
-}
-
-extern "C" int32_t canDriverGetLastInitStatus(uint8_t can_driver_idx) {
-    return (can_driver_idx < NUM_OF_CAN_BUSES) ? driver[can_driver_idx].last_init_status : -1;
-}
-
-extern "C" uint32_t canDriverGetTxErrorCount(uint8_t can_driver_idx) {
-    if (can_driver_idx >= NUM_OF_CAN_BUSES) {
-        return 0;
-    }
-
-    FDCAN_ErrorCountersTypeDef error_counters = {};
-    (void)HAL_FDCAN_GetErrorCounters(driver[can_driver_idx].handler, &error_counters);
-    return error_counters.TxErrorCnt;
-}
-
-extern "C" uint32_t canDriverGetBusOff(uint8_t can_driver_idx) {
-    if (can_driver_idx >= NUM_OF_CAN_BUSES) {
-        return 0;
-    }
-
-    FDCAN_ProtocolStatusTypeDef protocol_status = {};
-    (void)HAL_FDCAN_GetProtocolStatus(driver[can_driver_idx].handler, &protocol_status);
-    return protocol_status.BusOff;
-}
-
-extern "C" uint32_t canDriverGetTxFifoFreeLevel(uint8_t can_driver_idx) {
-    if (can_driver_idx >= NUM_OF_CAN_BUSES) {
-        return 0;
-    }
-
-    return HAL_FDCAN_GetTxFifoFreeLevel(driver[can_driver_idx].handler);
-}
-
-extern "C" uint32_t canDriverGetLastErrorCode(uint8_t can_driver_idx) {
-    if (can_driver_idx >= NUM_OF_CAN_BUSES) {
-        return 0;
-    }
-
-    FDCAN_ProtocolStatusTypeDef protocol_status = {};
-    (void)HAL_FDCAN_GetProtocolStatus(driver[can_driver_idx].handler, &protocol_status);
-    return protocol_status.LastErrorCode;
-}
-
-extern "C" uint32_t canDriverGetActivity(uint8_t can_driver_idx) {
-    if (can_driver_idx >= NUM_OF_CAN_BUSES) {
-        return 0;
-    }
-
-    FDCAN_ProtocolStatusTypeDef protocol_status = {};
-    (void)HAL_FDCAN_GetProtocolStatus(driver[can_driver_idx].handler, &protocol_status);
-    return protocol_status.Activity;
 }

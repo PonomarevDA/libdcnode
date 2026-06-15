@@ -58,18 +58,6 @@ extern "C"
     uint64_t canDriverGetRxOverflowCount();
     uint64_t canDriverGetErrorCount();
 
-#ifdef USE_PLATFORM_NODE_V4
-    uint64_t canDriverGetTxCount(uint8_t can_driver_idx);
-    uint64_t canDriverGetRxCount(uint8_t can_driver_idx);
-    int32_t canDriverGetLastTxStatus(uint8_t can_driver_idx);
-    int32_t canDriverGetLastInitStatus(uint8_t can_driver_idx);
-    uint32_t canDriverGetTxErrorCount(uint8_t can_driver_idx);
-    uint32_t canDriverGetBusOff(uint8_t can_driver_idx);
-    uint32_t canDriverGetTxFifoFreeLevel(uint8_t can_driver_idx);
-    uint32_t canDriverGetLastErrorCode(uint8_t can_driver_idx);
-    uint32_t canDriverGetActivity(uint8_t can_driver_idx);
-#endif
-
 #ifdef __cplusplus
 }
 #endif
