@@ -24,6 +24,10 @@
 #define CANARD_BUFFER_SIZE 1024
 #endif
 
+#ifndef NUM_OF_CAN_BUSES
+#define NUM_OF_CAN_BUSES 1
+#endif
+
 /**
  * @brief Encapsulate everything required for a subscriber
  */
@@ -76,6 +80,64 @@ static_assert(sizeof(DronecanNodeInstance) == INSTANCE_SIZE);
 static DronecanNodeInstance node = {};
 static ParamsApi params = {};
 static PlatformApi platform = {};
+
+namespace {
+
+struct BridgedFrameCacheEntry {
+    CanardCANFrame frame{};
+    uint32_t timestamp_ms{};
+    uint8_t iface_id{};
+    bool valid{false};
+};
+
+static constexpr uint32_t BRIDGE_CACHE_TTL_MS = 50;
+static BridgedFrameCacheEntry bridge_cache[32] = {};
+static uint8_t bridge_cache_next_idx = 0;
+
+bool isSameFrame(const CanardCANFrame& lhs, const CanardCANFrame& rhs) {
+    return lhs.id == rhs.id &&
+           lhs.data_len == rhs.data_len &&
+           memcmp(lhs.data, rhs.data, lhs.data_len) == 0;
+}
+
+bool wasRecentlyBridged(const CanardCANFrame& frame, uint8_t iface_id, uint32_t now_ms) {
+    for (const auto& entry : bridge_cache) {
+        if (entry.valid &&
+            entry.iface_id == iface_id &&
+            now_ms - entry.timestamp_ms <= BRIDGE_CACHE_TTL_MS &&
+            isSameFrame(entry.frame, frame)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void markRecentlyBridged(const CanardCANFrame& frame, uint8_t iface_id, uint32_t now_ms) {
+    bridge_cache[bridge_cache_next_idx] = {
+        .frame = frame,
+        .timestamp_ms = now_ms,
+        .iface_id = iface_id,
+        .valid = true
+    };
+    bridge_cache_next_idx = (bridge_cache_next_idx + 1U) % (sizeof(bridge_cache) / sizeof(bridge_cache[0]));
+}
+
+void bridgeFrame(const CanardCANFrame& rx_frame, uint8_t rx_iface_idx, uint32_t now_ms) {
+    if (NUM_OF_CAN_BUSES < 2 ||
+        wasRecentlyBridged(rx_frame, rx_iface_idx, now_ms)) {
+        return;
+    }
+
+    for (uint8_t tx_iface_idx = 0; tx_iface_idx < NUM_OF_CAN_BUSES; tx_iface_idx++) {
+        if (tx_iface_idx == rx_iface_idx) {
+            continue;
+        }
+        (void)platform.can.send(&rx_frame, tx_iface_idx);
+        markRecentlyBridged(rx_frame, tx_iface_idx, now_ms);
+    }
+}
+
+}  // namespace
 
 static bool shouldAcceptTransfer(const CanardInstance *ins,
                                  uint64_t *out_data_type_signature,
@@ -273,13 +335,19 @@ static uint8_t uavcanProcessSending()
     uint8_t tx_frames_counter = 0;
     while (txf)
     {
-        const int tx_res = platform.can.send(txf, CAN_DRIVER_FIRST);
-        if (tx_res > 0)
-        {
+        bool sent = false;
+        bool failed = false;
+        for (uint8_t iface_idx = 0; iface_idx < NUM_OF_CAN_BUSES; iface_idx++) {
+            const int tx_res = platform.can.send(txf, iface_idx);
+            sent = sent || tx_res > 0;
+            failed = failed || tx_res < 0;
+        }
+
+        if (sent) {
             canardPopTxQueue(&node.g_canard);
             txf = canardPeekTxQueue(&node.g_canard);
             tx_frames_counter++;
-        } else if (tx_res < 0) {
+        } else if (failed) {
             break;
         }
 
@@ -294,15 +362,18 @@ static uint8_t uavcanProcessSending()
 static bool uavcanProcessReceiving(uint32_t crnt_time_ms)
 {
     CanardCANFrame rx_frame;
-    for (size_t idx = 0; idx < 10; idx++)
-    {
-        int16_t res = platform.can.recv(&rx_frame, CAN_DRIVER_FIRST);
-        if (res)
+    for (uint8_t iface_idx = 0; iface_idx < NUM_OF_CAN_BUSES; iface_idx++) {
+        for (size_t idx = 0; idx < 10; idx++)
         {
-            uint64_t crnt_time_us = crnt_time_ms * 1000UL;
-            canardHandleRxFrame(&node.g_canard, &rx_frame, crnt_time_us);
-        } else {
-            break;
+            int16_t res = platform.can.recv(&rx_frame, iface_idx);
+            if (res)
+            {
+                uint64_t crnt_time_us = crnt_time_ms * 1000UL;
+                bridgeFrame(rx_frame, iface_idx, crnt_time_ms);
+                canardHandleRxFrame(&node.g_canard, &rx_frame, crnt_time_us);
+            } else {
+                break;
+            }
         }
     }
 
@@ -419,7 +490,7 @@ static void uavcanParamExecuteOpcodeHandle(CanardRxTransfer *transfer)
     switch (opcode)
     {
     case 0:
-        ok = (params.save() == -1) ? 0 : 1;
+        ok = (params.save() < 0) ? 0 : 1;
         break;
     case 1:
         ok = (params.resetToDefault() < 0) ? 0 : 1;
@@ -484,10 +555,12 @@ int16_t uavcanInitApplication(ParamsApi params_api, PlatformApi platform_api, co
 
     params = params_api;
 
-    int16_t res = platform.can.init(1000000, CAN_DRIVER_FIRST);
-    if (res < 0)
-    {
-        return res;
+    for (uint8_t iface_idx = 0; iface_idx < NUM_OF_CAN_BUSES; iface_idx++) {
+        int16_t res = platform.can.init(1000000, iface_idx);
+        if (res < 0)
+        {
+            return res;
+        }
     }
 
     canardInit(&node.g_canard,
