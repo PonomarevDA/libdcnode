@@ -81,64 +81,6 @@ static DronecanNodeInstance node = {};
 static ParamsApi params = {};
 static PlatformApi platform = {};
 
-namespace {
-
-struct BridgedFrameCacheEntry {
-    CanardCANFrame frame{};
-    uint32_t timestamp_ms{};
-    uint8_t iface_id{};
-    bool valid{false};
-};
-
-static constexpr uint32_t BRIDGE_CACHE_TTL_MS = 50;
-static BridgedFrameCacheEntry bridge_cache[32] = {};
-static uint8_t bridge_cache_next_idx = 0;
-
-bool isSameFrame(const CanardCANFrame& lhs, const CanardCANFrame& rhs) {
-    return lhs.id == rhs.id &&
-           lhs.data_len == rhs.data_len &&
-           memcmp(lhs.data, rhs.data, lhs.data_len) == 0;
-}
-
-bool wasRecentlyBridged(const CanardCANFrame& frame, uint8_t iface_id, uint32_t now_ms) {
-    for (const auto& entry : bridge_cache) {
-        if (entry.valid &&
-            entry.iface_id == iface_id &&
-            now_ms - entry.timestamp_ms <= BRIDGE_CACHE_TTL_MS &&
-            isSameFrame(entry.frame, frame)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void markRecentlyBridged(const CanardCANFrame& frame, uint8_t iface_id, uint32_t now_ms) {
-    bridge_cache[bridge_cache_next_idx] = {
-        .frame = frame,
-        .timestamp_ms = now_ms,
-        .iface_id = iface_id,
-        .valid = true
-    };
-    bridge_cache_next_idx = (bridge_cache_next_idx + 1U) % (sizeof(bridge_cache) / sizeof(bridge_cache[0]));
-}
-
-void bridgeFrame(const CanardCANFrame& rx_frame, uint8_t rx_iface_idx, uint32_t now_ms) {
-    if (NUM_OF_CAN_BUSES < 2 ||
-        wasRecentlyBridged(rx_frame, rx_iface_idx, now_ms)) {
-        return;
-    }
-
-    for (uint8_t tx_iface_idx = 0; tx_iface_idx < NUM_OF_CAN_BUSES; tx_iface_idx++) {
-        if (tx_iface_idx == rx_iface_idx) {
-            continue;
-        }
-        (void)platform.can.send(&rx_frame, tx_iface_idx);
-        markRecentlyBridged(rx_frame, tx_iface_idx, now_ms);
-    }
-}
-
-}  // namespace
-
 static bool shouldAcceptTransfer(const CanardInstance *ins,
                                  uint64_t *out_data_type_signature,
                                  uint16_t data_type_id,
@@ -369,7 +311,6 @@ static bool uavcanProcessReceiving(uint32_t crnt_time_ms)
             if (res)
             {
                 uint64_t crnt_time_us = crnt_time_ms * 1000UL;
-                bridgeFrame(rx_frame, iface_idx, crnt_time_ms);
                 canardHandleRxFrame(&node.g_canard, &rx_frame, crnt_time_us);
             } else {
                 break;
