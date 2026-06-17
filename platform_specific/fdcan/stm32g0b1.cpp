@@ -6,9 +6,10 @@
  */
 
 #include "libdcnode/can_driver.h"
-#include <string.h>
-#include "main.h"
 
+#include <string.h>
+
+#include "main.h"
 
 #ifndef NUM_OF_CAN_BUSES
     #define NUM_OF_CAN_BUSES 1
@@ -17,7 +18,7 @@
 extern FDCAN_HandleTypeDef hfdcan1;
 extern FDCAN_HandleTypeDef hfdcan2;
 
-typedef struct{
+typedef struct {
     FDCAN_HandleTypeDef* handler;
     FDCAN_TxHeaderTypeDef tx_header;
     uint8_t rx_buf[8];
@@ -27,9 +28,9 @@ typedef struct{
 } CanDriver;
 
 static CanDriver driver[NUM_OF_CAN_BUSES] = {
-    {.handler = &hfdcan1},
+    {.handler = &hfdcan1, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0},
 #if NUM_OF_CAN_BUSES >= 2
-    {.handler = &hfdcan2}
+    {.handler = &hfdcan2, .tx_header = {}, .rx_buf = {}, .err_counter = 0, .tx_counter = 0, .rx_counter = 0}
 #endif
 };
 
@@ -39,6 +40,10 @@ void canDriverSetInterfaceName(const char* interface_name) {
 
 int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx) {
     (void)can_speed;
+    if (can_driver_idx >= NUM_OF_CAN_BUSES) {
+        return -1;
+    }
+
     driver[can_driver_idx].tx_header.IdType = FDCAN_EXTENDED_ID;
     driver[can_driver_idx].tx_header.TxFrameType = FDCAN_DATA_FRAME;
     driver[can_driver_idx].tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
@@ -63,7 +68,7 @@ int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx) {
 }
 
 int16_t canDriverReceive(CanardCANFrame* const rx_frame, uint8_t can_driver_idx) {
-    if (rx_frame == NULL) {
+    if (rx_frame == NULL || can_driver_idx >= NUM_OF_CAN_BUSES) {
         return 0;
     }
 
@@ -79,15 +84,19 @@ int16_t canDriverReceive(CanardCANFrame* const rx_frame, uint8_t can_driver_idx)
 
     driver[can_driver_idx].rx_counter++;
     rx_frame->id = (CANARD_CAN_EXT_ID_MASK & (rx_header.Identifier)) | CANARD_CAN_FRAME_EFF;
-    rx_frame->data_len = rx_header.DataLength >> 4*4;
-    rx_frame->iface_id = 0;
+    rx_frame->data_len = rx_header.DataLength >> 16U;
+    rx_frame->iface_id = can_driver_idx;
     memcpy(rx_frame->data, driver[can_driver_idx].rx_buf, rx_frame->data_len);
     return 1;
 }
 
 int16_t canDriverTransmit(const CanardCANFrame* const tx_frame, uint8_t can_driver_idx) {
+    if (tx_frame == NULL || can_driver_idx >= NUM_OF_CAN_BUSES) {
+        return 0;
+    }
+
     driver[can_driver_idx].tx_header.Identifier = tx_frame->id;
-    driver[can_driver_idx].tx_header.DataLength = tx_frame->data_len << 4*4;
+    driver[can_driver_idx].tx_header.DataLength = tx_frame->data_len << 16U;
 
     HAL_StatusTypeDef res = HAL_FDCAN_AddMessageToTxFifoQ(driver[can_driver_idx].handler,
                                                           &driver[can_driver_idx].tx_header,
