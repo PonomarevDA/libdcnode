@@ -49,82 +49,108 @@ void canDriverSetInterfaceName(const char* interface_name) {
     (void)interface_name;
 }
 
-int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx) {
-    (void)can_speed;
-    if (can_driver_idx >= NUM_OF_CAN_BUSES) {
+static int16_t canDriverInitPhysical(uint8_t physical_idx) {
+    if (physical_idx >= NUM_OF_CAN_BUSES) {
         return -1;
     }
 
-    driver[can_driver_idx].tx_header.IdType = FDCAN_EXTENDED_ID;
-    driver[can_driver_idx].tx_header.TxFrameType = FDCAN_DATA_FRAME;
-    driver[can_driver_idx].tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-    driver[can_driver_idx].tx_header.BitRateSwitch = FDCAN_BRS_OFF;
-    driver[can_driver_idx].tx_header.FDFormat = FDCAN_CLASSIC_CAN;
-    driver[can_driver_idx].tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-    driver[can_driver_idx].tx_header.MessageMarker = 0;
+    driver[physical_idx].tx_header.IdType = FDCAN_EXTENDED_ID;
+    driver[physical_idx].tx_header.TxFrameType = FDCAN_DATA_FRAME;
+    driver[physical_idx].tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+    driver[physical_idx].tx_header.BitRateSwitch = FDCAN_BRS_OFF;
+    driver[physical_idx].tx_header.FDFormat = FDCAN_CLASSIC_CAN;
+    driver[physical_idx].tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+    driver[physical_idx].tx_header.MessageMarker = 0;
 
     HAL_StatusTypeDef res = HAL_FDCAN_ConfigGlobalFilter(
-        driver[can_driver_idx].handler,
+        driver[physical_idx].handler,
         FDCAN_ACCEPT_IN_RX_FIFO0,
         FDCAN_ACCEPT_IN_RX_FIFO0,
         FDCAN_REJECT_REMOTE,
         FDCAN_REJECT_REMOTE);
     if (res != HAL_OK) {
-        driver[can_driver_idx].err_counter++;
+        driver[physical_idx].err_counter++;
         return -1;
     }
 
-    res = HAL_FDCAN_Start(driver[can_driver_idx].handler);
+    res = HAL_FDCAN_Start(driver[physical_idx].handler);
     if (res != HAL_OK) {
-        driver[can_driver_idx].err_counter++;
+        driver[physical_idx].err_counter++;
         return -1;
     }
 
     return 0;
 }
 
+int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx) {
+    (void)can_speed;
+    if (can_driver_idx != CAN_DRIVER_FIRST) {
+        return -1;
+    }
+
+    for (uint8_t physical_idx = 0; physical_idx < NUM_OF_CAN_BUSES; physical_idx++) {
+        const int16_t res = canDriverInitPhysical(physical_idx);
+        if (res < 0) {
+            return res;
+        }
+    }
+
+    return 0;
+}
+
 int16_t canDriverReceive(CanardCANFrame* const rx_frame, uint8_t can_driver_idx) {
-    if (rx_frame == NULL || can_driver_idx >= NUM_OF_CAN_BUSES) {
+    if (rx_frame == NULL || can_driver_idx != CAN_DRIVER_FIRST) {
         return 0;
     }
 
-    FDCAN_RxHeaderTypeDef rx_header;
+    static uint8_t next_physical_idx = 0;
+    for (uint8_t attempt = 0; attempt < NUM_OF_CAN_BUSES; attempt++) {
+        const uint8_t physical_idx = static_cast<uint8_t>((next_physical_idx + attempt) % NUM_OF_CAN_BUSES);
+        FDCAN_RxHeaderTypeDef rx_header;
 
-    HAL_StatusTypeDef res = HAL_FDCAN_GetRxMessage(driver[can_driver_idx].handler,
-                                                   FDCAN_RX_FIFO0,
-                                                   &rx_header,
-                                                   driver[can_driver_idx].rx_buf);
-    if (res != HAL_OK) {
-        return 0;
+        HAL_StatusTypeDef res = HAL_FDCAN_GetRxMessage(driver[physical_idx].handler,
+                                                       FDCAN_RX_FIFO0,
+                                                       &rx_header,
+                                                       driver[physical_idx].rx_buf);
+        if (res != HAL_OK) {
+            continue;
+        }
+
+        driver[physical_idx].rx_counter++;
+        rx_frame->id = (CANARD_CAN_EXT_ID_MASK & (rx_header.Identifier)) | CANARD_CAN_FRAME_EFF;
+        rx_frame->data_len = static_cast<uint8_t>(rx_header.DataLength);
+        rx_frame->iface_id = physical_idx;
+        memcpy(rx_frame->data, driver[physical_idx].rx_buf, rx_frame->data_len);
+        next_physical_idx = static_cast<uint8_t>((physical_idx + 1) % NUM_OF_CAN_BUSES);
+        return 1;
     }
 
-    driver[can_driver_idx].rx_counter++;
-    rx_frame->id = (CANARD_CAN_EXT_ID_MASK & (rx_header.Identifier)) | CANARD_CAN_FRAME_EFF;
-    rx_frame->data_len = static_cast<uint8_t>(rx_header.DataLength);
-    rx_frame->iface_id = can_driver_idx;
-    memcpy(rx_frame->data, driver[can_driver_idx].rx_buf, rx_frame->data_len);
-    return 1;
+    return 0;
 }
 
 int16_t canDriverTransmit(const CanardCANFrame* const tx_frame, uint8_t can_driver_idx) {
-    if (tx_frame == NULL || can_driver_idx >= NUM_OF_CAN_BUSES) {
+    if (tx_frame == NULL || can_driver_idx != CAN_DRIVER_FIRST) {
         return 0;
     }
 
-    driver[can_driver_idx].tx_header.Identifier = tx_frame->id & CANARD_CAN_EXT_ID_MASK;
-    driver[can_driver_idx].tx_header.DataLength = tx_frame->data_len;
+    bool sent = false;
+    for (uint8_t physical_idx = 0; physical_idx < NUM_OF_CAN_BUSES; physical_idx++) {
+        driver[physical_idx].tx_header.Identifier = tx_frame->id & CANARD_CAN_EXT_ID_MASK;
+        driver[physical_idx].tx_header.DataLength = tx_frame->data_len;
 
-    HAL_StatusTypeDef res = HAL_FDCAN_AddMessageToTxFifoQ(
-        driver[can_driver_idx].handler,
-        &driver[can_driver_idx].tx_header,
-        (uint8_t*)tx_frame->data);
-    if (res == HAL_OK) {
-        driver[can_driver_idx].tx_counter++;
-        return 1;
-    } else {
-        driver[can_driver_idx].err_counter++;
-        return 0;
+        HAL_StatusTypeDef res = HAL_FDCAN_AddMessageToTxFifoQ(
+            driver[physical_idx].handler,
+            &driver[physical_idx].tx_header,
+            (uint8_t*)tx_frame->data);
+        if (res == HAL_OK) {
+            driver[physical_idx].tx_counter++;
+            sent = true;
+        } else {
+            driver[physical_idx].err_counter++;
+        }
     }
+
+    return sent ? 1 : 0;
 }
 
 uint64_t canDriverGetErrorCount() {

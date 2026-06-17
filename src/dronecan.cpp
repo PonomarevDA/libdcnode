@@ -24,10 +24,6 @@
 #define CANARD_BUFFER_SIZE 1024
 #endif
 
-#ifndef NUM_OF_CAN_BUSES
-#define NUM_OF_CAN_BUSES 1
-#endif
-
 /**
  * @brief Encapsulate everything required for a subscriber
  */
@@ -277,19 +273,13 @@ static uint8_t uavcanProcessSending()
     uint8_t tx_frames_counter = 0;
     while (txf)
     {
-        bool sent = false;
-        bool failed = false;
-        for (uint8_t iface_idx = 0; iface_idx < NUM_OF_CAN_BUSES; iface_idx++) {
-            const int tx_res = platform.can.send(txf, iface_idx);
-            sent = sent || tx_res > 0;
-            failed = failed || tx_res < 0;
-        }
-
-        if (sent) {
+        const int tx_res = platform.can.send(txf, CAN_DRIVER_FIRST);
+        if (tx_res > 0)
+        {
             canardPopTxQueue(&node.g_canard);
             txf = canardPeekTxQueue(&node.g_canard);
             tx_frames_counter++;
-        } else if (failed) {
+        } else if (tx_res < 0) {
             break;
         }
 
@@ -304,17 +294,15 @@ static uint8_t uavcanProcessSending()
 static bool uavcanProcessReceiving(uint32_t crnt_time_ms)
 {
     CanardCANFrame rx_frame;
-    for (uint8_t iface_idx = 0; iface_idx < NUM_OF_CAN_BUSES; iface_idx++) {
-        for (size_t idx = 0; idx < 10; idx++)
+    for (size_t idx = 0; idx < 10; idx++)
+    {
+        int16_t res = platform.can.recv(&rx_frame, CAN_DRIVER_FIRST);
+        if (res)
         {
-            int16_t res = platform.can.recv(&rx_frame, iface_idx);
-            if (res)
-            {
-                uint64_t crnt_time_us = crnt_time_ms * 1000UL;
-                canardHandleRxFrame(&node.g_canard, &rx_frame, crnt_time_us);
-            } else {
-                break;
-            }
+            uint64_t crnt_time_us = crnt_time_ms * 1000UL;
+            canardHandleRxFrame(&node.g_canard, &rx_frame, crnt_time_us);
+        } else {
+            break;
         }
     }
 
@@ -431,7 +419,7 @@ static void uavcanParamExecuteOpcodeHandle(CanardRxTransfer *transfer)
     switch (opcode)
     {
     case 0:
-        ok = (params.save() < 0) ? 0 : 1;
+        ok = (params.save() == -1) ? 0 : 1;
         break;
     case 1:
         ok = (params.resetToDefault() < 0) ? 0 : 1;
@@ -496,12 +484,10 @@ int16_t uavcanInitApplication(ParamsApi params_api, PlatformApi platform_api, co
 
     params = params_api;
 
-    for (uint8_t iface_idx = 0; iface_idx < NUM_OF_CAN_BUSES; iface_idx++) {
-        int16_t res = platform.can.init(1000000, iface_idx);
-        if (res < 0)
-        {
-            return res;
-        }
+    int16_t res = platform.can.init(1000000, CAN_DRIVER_FIRST);
+    if (res < 0)
+    {
+        return res;
     }
 
     canardInit(&node.g_canard,
