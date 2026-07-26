@@ -88,7 +88,7 @@ uint16_t uavcanParamGetSetMakeStringResponse(
 
     // Value value (uint8[<=128] string_value)
     canardEncodeScalar(buffer, 5, 3, &tag_string);
-    uint8_t string_size = strlenSafely(str_val, 128);
+    uint8_t string_size = strlenSafely(str_val, STRING_MAX_SIZE);
     uint16_t string_bit_offset = string_size * 8;
     canardEncodeScalar(buffer, 8, 8, &string_size);
     memcpy(&buffer[2], str_val, string_size);
