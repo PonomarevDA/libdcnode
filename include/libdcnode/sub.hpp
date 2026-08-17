@@ -56,6 +56,7 @@ namespace libdcnode
                                 UAVCAN_EQUIPMENT_CAMERA_GIMBAL_ANGULARCOMMAND)
     LIBDCNODE_DEFINE_SUB_TRAITS(::uavcan_equipment_ahrs_Solution, UAVCAN_EQUIPMENT_AHRS_SOLUTION)
     LIBDCNODE_DEFINE_SUB_TRAITS(::uavcan_equipment_esc_RawCommand, UAVCAN_EQUIPMENT_ESC_RAWCOMMAND)
+    LIBDCNODE_DEFINE_SUB_TRAITS(::uavcan_equipment_ice_reciprocating_Status, UAVCAN_EQUIPMENT_ICE_RECIPROCATING_STATUS)
     LIBDCNODE_DEFINE_SUB_TRAITS(::uavcan_equipment_safety_ArmingStatus, UAVCAN_EQUIPMENT_SAFETY_ARMINGSTATUS)
 
     template <typename MessageType>
