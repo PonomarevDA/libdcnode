@@ -40,6 +40,7 @@ IntegerDesc_t __attribute__((weak)) integer_desc_pool[] = {
 IntegerParamValue_t integer_values_pool[sizeof(integer_desc_pool) / sizeof(IntegerDesc_t)];
 
 StringDesc_t __attribute__((weak)) string_desc_pool[] = {
+    {"uavcan.node.description", "", true},
     {"system.name", "dronecan_application", true},
 };
 StringParamValue_t string_values_pool[sizeof(string_desc_pool) / sizeof(StringDesc_t)];
@@ -140,7 +141,7 @@ void lights_callback(const uavcan_equipment_indication_LightsCommand &msg)
 int main()
 {
 
-    paramsInit(1, 1, -1, 1);
+    paramsInit(1, 2, -1, 1);
     paramsResetToDefault();
     ParamsApi params_api = {
         .getName = paramsGetName,
