@@ -38,6 +38,10 @@ target_include_directories(libdcnode PUBLIC
     ${DSDL_OUT_DIR}/include
 )
 
+target_compile_definitions(libdcnode PUBLIC
+    DRONECAN_CXX_WRAPPERS=1
+)
+
 
 set_source_files_properties(${SERIALIZATION_SOURCES}
     PROPERTIES
@@ -47,3 +51,25 @@ set_source_files_properties(${SERIALIZATION_SOURCES}
 target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wno-address-of-packed-member>
 )
+
+option(LIBDCNODE_BUILD_TESTS "Build libdcnode host tests" OFF)
+if(LIBDCNODE_BUILD_TESTS)
+    enable_testing()
+    add_executable(libdcnode_pub_sub_test
+        ${CMAKE_CURRENT_LIST_DIR}/tests/pub_sub_test.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/Libs/libcanard_v0/canard.c
+        ${DSDL_OUT_DIR}/src/uavcan.protocol.Panic.c
+    )
+    target_include_directories(libdcnode_pub_sub_test PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}/include
+        ${CMAKE_CURRENT_LIST_DIR}/Libs
+        ${DSDL_OUT_DIR}/include
+    )
+    target_compile_definitions(libdcnode_pub_sub_test PRIVATE
+        DRONECAN_CXX_WRAPPERS=1
+    )
+    target_compile_options(libdcnode_pub_sub_test PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Werror>
+    )
+    add_test(NAME libdcnode_pub_sub_test COMMAND libdcnode_pub_sub_test)
+endif()
