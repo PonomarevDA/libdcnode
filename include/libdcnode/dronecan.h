@@ -71,6 +71,17 @@ extern "C"
                         uint16_t payload_len);
 
   /**
+   * @brief Send an RPC request to a remote node.
+   */
+  int16_t uavcanRequest(uint8_t destination_node_id,
+                        uint64_t data_type_signature,
+                        uint16_t data_type_id,
+                        uint8_t *inout_transfer_id,
+                        uint8_t priority,
+                        const void *payload,
+                        uint16_t payload_len);
+
+  /**
    * @brief Respond on RPC-request.
    */
   void uavcanRespond(CanardRxTransfer *transfer,
@@ -78,6 +89,13 @@ extern "C"
                      uint16_t data_type_id,
                      const uint8_t *payload,
                      uint16_t len);
+
+  /**
+   * @brief Override the default BeginFirmwareUpdate behavior.
+   * @note Passing NULL restores the default behavior, which requests a restart.
+   */
+  typedef void (*UavcanBeginFirmwareUpdateHandler)(CanardRxTransfer *transfer);
+  void uavcanSetBeginFirmwareUpdateHandler(UavcanBeginFirmwareUpdateHandler handler);
 
   /**
    * @brief NodeInfo API
