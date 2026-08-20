@@ -29,6 +29,11 @@ jobs:
           source ".venv/bin/activate"
           make ${{ matrix.target }}-build
 
+      - name: Run unit tests
+        run: |
+          source ".venv/bin/activate"
+          make tests
+
       - name: Run SITL and smoke test
         timeout-minutes: 3
         run: |

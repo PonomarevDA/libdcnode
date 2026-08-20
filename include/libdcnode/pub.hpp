@@ -10,17 +10,9 @@
 
 #include <cstdint>
 #include <algorithm>
-#include <type_traits>
-#include <utility>
 #include "libdcnode/dronecan.h"
 #include "libdcnode/platform.hpp"
 #include "dronecan_msgs.h"
-
-// Max encoded message size (bytes) for publisher stack buffer.
-// Override via -DLIBDCNODE_MAX_PUB_MESSAGE_SIZE=... if your DSDL set requires more.
-#ifndef LIBDCNODE_MAX_PUB_MESSAGE_SIZE
-#define LIBDCNODE_MAX_PUB_MESSAGE_SIZE 600U
-#endif
 
 // Initial delay before first publish after boot/reset (ms).
 // Intended to reduce CAN bus flooding during rapid reboot loops (e.g., watchdog resets).
@@ -31,48 +23,6 @@
 
 namespace libdcnode
 {
-
-    template <typename MessageType>
-    struct DronecanPublisherTraits;
-
-#define LIBDCNODE_PUB_ENCODE(MessageType) MessageType##_encode
-#define LIBDCNODE_PUB_BROADCAST(buffer, Prefix, inout_transfer_id, size)                                   \
-    uavcanPublish(Prefix##_SIGNATURE, Prefix##_ID, inout_transfer_id, CANARD_TRANSFER_PRIORITY_MEDIUM,     \
-                 buffer, size)
-#define LIBDCNODE_DEFINE_PUB_TRAITS(MessageType, MessagePrefix)                                            \
-    template <>                                                                                            \
-    struct DronecanPublisherTraits<MessageType>                                                            \
-    {                                                                                                      \
-        using EncodeRet = decltype(LIBDCNODE_PUB_ENCODE(MessageType)(                                      \
-            std::declval<MessageType *>(), std::declval<std::uint8_t *>()));                               \
-        static_assert(std::is_same_v<EncodeRet, std::uint32_t>, "*_encode() must return uint32_t exactly."); \
-        static inline int16_t publish_once(MessageType *msg, uint8_t *inout_transfer_id)                   \
-        {                                                                                                  \
-            uint8_t buffer[LIBDCNODE_MAX_PUB_MESSAGE_SIZE];                                                \
-            auto bytes_needed = LIBDCNODE_PUB_ENCODE(MessageType)(msg, buffer);                            \
-            if (bytes_needed == 0U || bytes_needed > LIBDCNODE_MAX_PUB_MESSAGE_SIZE)                       \
-                return (int16_t)0;                                                                         \
-            return LIBDCNODE_PUB_BROADCAST(buffer, MessagePrefix, inout_transfer_id, bytes_needed);        \
-        }                                                                                                  \
-    };
-
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_power_CircuitStatus, UAVCAN_EQUIPMENT_POWER_CIRCUITSTATUS)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_power_BatteryInfo, UAVCAN_EQUIPMENT_POWER_BATTERYINFO)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_ahrs_RawIMU, UAVCAN_EQUIPMENT_AHRS_RAWIMU)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_ahrs_MagneticFieldStrength2,
-                                UAVCAN_EQUIPMENT_AHRS_MAGNETICFIELDSTRENGTH2)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_camera_gimbal_Status, UAVCAN_EQUIPMENT_CAMERA_GIMBAL_STATUS)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_actuator_ArrayCommand,
-                                UAVCAN_EQUIPMENT_ACTUATOR_ARRAYCOMMAND)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_actuator_Status, UAVCAN_EQUIPMENT_ACTUATOR_STATUS)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_esc_Status, UAVCAN_EQUIPMENT_ESC_STATUS)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_hardpoint_Status, UAVCAN_EQUIPMENT_HARDPOINT_STATUS)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::ardupilot_equipment_power_BatteryInfoAux, ARDUPILOT_EQUIPMENT_POWER_BATTERYINFOAUX)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_air_data_StaticPressure,
-                                UAVCAN_EQUIPMENT_AIR_DATA_STATICPRESSURE)
-    LIBDCNODE_DEFINE_PUB_TRAITS(::uavcan_equipment_range_sensor_Measurement,
-                                UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT)
-
     template <typename MessageType>
     class DronecanPub
     {
@@ -81,8 +31,23 @@ namespace libdcnode
 
         inline void publish()
         {
-            DronecanPublisherTraits<MessageType>::publish_once(&msg, &inout_transfer_id);
-            inout_transfer_id++;
+            using Interface = typename MessageType::cxx_iface;
+            uint8_t buffer[Interface::MAX_SIZE];
+#if CANARD_ENABLE_CANFD || CANARD_ENABLE_TAO_OPTION
+            const auto bytes_needed = Interface::encode(&msg, buffer, true);
+#else
+            const auto bytes_needed = Interface::encode(&msg, buffer);
+#endif
+            if (bytes_needed == 0U || bytes_needed > Interface::MAX_SIZE)
+            {
+                return;
+            }
+            uavcanPublish(Interface::SIGNATURE,
+                          Interface::ID,
+                          &inout_transfer_id,
+                          CANARD_TRANSFER_PRIORITY_MEDIUM,
+                          buffer,
+                          bytes_needed);
         }
 
         MessageType msg{};
@@ -119,10 +84,5 @@ namespace libdcnode
     };
 
 } // namespace libdcnode
-
-// Undef internal macros
-#undef LIBDCNODE_PUB_ENCODE
-#undef LIBDCNODE_PUB_BROADCAST
-#undef LIBDCNODE_DEFINE_PUB_TRAITS
 
 #endif // LIBDCNODE_PUB_HPP_
