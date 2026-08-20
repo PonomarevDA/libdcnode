@@ -76,6 +76,7 @@ static_assert(sizeof(DronecanNodeInstance) == INSTANCE_SIZE);
 static DronecanNodeInstance node = {};
 static ParamsApi params = {};
 static PlatformApi platform = {};
+static UavcanBeginFirmwareUpdateHandler begin_firmware_update_handler = NULL;
 
 static bool shouldAcceptTransfer(const CanardInstance *ins,
                                  uint64_t *out_data_type_signature,
@@ -124,6 +125,25 @@ int16_t uavcanPublish(uint64_t data_type_signature,
                            payload_len);
 }
 
+int16_t uavcanRequest(uint8_t destination_node_id,
+                      uint64_t data_type_signature,
+                      uint16_t data_type_id,
+                      uint8_t *inout_transfer_id,
+                      uint8_t priority,
+                      const void *payload,
+                      uint16_t payload_len)
+{
+    return canardRequestOrRespond(&node.g_canard,
+                                  destination_node_id,
+                                  data_type_signature,
+                                  data_type_id,
+                                  inout_transfer_id,
+                                  priority,
+                                  CanardRequest,
+                                  payload,
+                                  payload_len);
+}
+
 void uavcanRespond(CanardRxTransfer *transfer,
                    uint64_t data_type_signature,
                    uint16_t data_type_id,
@@ -144,6 +164,11 @@ void uavcanRespond(CanardRxTransfer *transfer,
                            CanardResponse,
                            payload,
                            len);
+}
+
+void uavcanSetBeginFirmwareUpdateHandler(UavcanBeginFirmwareUpdateHandler handler)
+{
+    begin_firmware_update_handler = handler;
 }
 
 void uavcanConfigure(const SoftwareVersion *new_sw_vers, const HardwareVersion *new_hw_vers)
@@ -463,8 +488,13 @@ static void uavcanProtocolBeginFirmwareUpdateHandle(CanardRxTransfer *transfer)
         return;
     }
 
-    // Do not send a response intentionally; just force a reboot so the bootloader takes over.
-    (void)platform.requestRestart();
+    if (begin_firmware_update_handler != NULL)
+    {
+        begin_firmware_update_handler(transfer);
+    } else {
+        // Do not send a response intentionally; just force a reboot so the bootloader takes over.
+        (void)platform.requestRestart();
+    }
 }
 
 int16_t uavcanInitApplication(ParamsApi params_api, PlatformApi platform_api, const AppInfo *app_info)
