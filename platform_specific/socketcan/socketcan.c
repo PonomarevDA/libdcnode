@@ -19,27 +19,25 @@
 #include <linux/can.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
 
 /// Returns the current errno as negated int16_t
 static int16_t getErrorCode()
 {
-    const int out = -abs(errno);
-    if (out < 0)
-    {
-        if (out >= INT16_MIN)
-        {
-            return (int16_t)out;
-        }
-        else
-        {
-            return INT16_MIN;
-        }
-    }
-    else
+    const int errno_val = errno;
+    if (errno_val == 0)
     {
         assert(false);          // Requested an error when errno is zero?
         return INT16_MIN;
     }
+
+    if (errno_val > INT16_MAX || errno_val < INT16_MIN) {
+        assert(false);  // Requested an error when errno is zero?
+        return INT16_MIN;
+    }
+    return -(int16_t)errno_val;
 }
 
 int16_t socketcanInit(SocketCANInstance* out_ins, const char* can_iface_name)
