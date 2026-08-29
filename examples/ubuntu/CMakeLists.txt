@@ -12,7 +12,7 @@ cmake_path(GET EXAMPLES_DIR PARENT_PATH ROOT_DIR)
 add_subdirectory(${ROOT_DIR} ${CMAKE_BINARY_DIR}/libdcnode)
 
 # 2. libcanver
-set(CAN_PLATFORM socketcan) # Options: bxcan, fdcan or socketcan
+set(CAN_PLATFORM socketcan) # Options: bxcan or socketcan
 include(${ROOT_DIR}/platform_specific/${CAN_PLATFORM}/config.cmake)
 
 # 3. libparams

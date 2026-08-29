@@ -40,8 +40,8 @@ v0.6.0 turns libdcnode into a standalone CMake library with explicit integration
 # libdcnode
 add_subdirectory(${ROOT_DIR} ${CMAKE_BINARY_DIR}/libdcnode)
 
-# platform config
-set(CAN_PLATFORM socketcan) # bxcan, fdcan, socketcan
+# optional bundled platform config
+set(CAN_PLATFORM socketcan) # bxcan or socketcan
 include(${ROOT_DIR}/platform_specific/${CAN_PLATFORM}/config.cmake)
 
 # libparams
@@ -53,6 +53,9 @@ add_executable(${PROJECT_NAME} ... ${DRONECAN_PLATFORM_SOURCES} ...)
 target_include_directories(${PROJECT_NAME} PRIVATE ... ${DRONECAN_PLATFORM_HEADERS} ...)
 target_link_libraries(${PROJECT_NAME} PRIVATE libdcnode::libdcnode)
 ```
+
+FDCAN applications provide their `canDriver*` callbacks from the application
+peripheral layer and pass them through `PlatformApi`.
 
 2. **Update includes**
 
