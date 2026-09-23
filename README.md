@@ -37,6 +37,23 @@ During configure, DSDL code is generated into `build/generated/libdcnode/seriali
 Provide the platform and params hooks from `include/libdcnode/platform.hpp` and `include/libdcnode/params.hpp` in your application; the Ubuntu example shows minimal implementations.
 
 Number of subscribers is limited by parameter `DRONECAN_MAX_SUBS_NUMBER` in file `include/libdcnode/dronecan.h` to 15. You may modify this parameter for further development, however note that size of each subscriber is limited to 16 or 24 bytes depending on 32 or 64 bit device.
+### bxCAN receive integration
+
+The existing `PlatformApi.can` hooks (`init`, `recv`, `send`, and counters) support both receive modes without changing protocol callbacks.
+A board can provide `canDriverConfigureRxInterrupt(bool enabled)` from [can_rx_irq.h](platform_specific/bxcan/can_rx_irq.h) and call `canDriverHandleRxInterrupt()` from its RX callback.
+With CubeMX, enable the matching FIFO IRQ in the `.ioc`, regenerate, and implement the HAL FIFO message-pending callback; keep NVIC enablement and priority in generated code.
+The driver calls the board hook with `false` before reinitializing CAN and with `true` after successful initialization.
+The hook runs with CPU interrupts masked, must not wait, and returns `true` only if it enabled all required RX interrupt sources.
+If the hook is absent or returns `false`, reception uses polling; a false return must leave those sources disabled.
+Interrupt mode is selected during initialization, never inferred from traffic activity or NVIC configuration alone.
+
+The ISR copies at most three complete frames into a fixed 64-frame queue and drops the newest frame when full.
+`recv` dequeues frames in the main loop, where DroneCAN decoding and application callbacks still run.
+Board handlers sharing the queue must use the same preemption priority, and must cover every FIFO used by the acceptance filters.
+The driver reserves the queue statically, including when polling is selected.
+Queue access, counter snapshots, and nonblocking TX preserve the caller's interrupt mask.
+`getRxOverflowCount` includes both hardware overruns and software queue drops.
+
 ### Ubuntu example (build, link, run)
 
 The `examples/ubuntu` target demonstrates the C API plus the modern C++ pub/sub wrappers end-to-end.

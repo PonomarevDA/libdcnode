@@ -32,6 +32,7 @@ typedef struct
     uint64_t signature;
     void (*callback)(CanardRxTransfer *transfer);
     uint16_t id;
+    uint8_t transfer_type;
 } Subscriber_t;
 #if UINTPTR_MAX == 0xFFFFFFFF
 static_assert(sizeof(Subscriber_t) == 16, "Subscriber_t size mismatch on 32-bit");
@@ -104,8 +105,19 @@ int8_t uavcanSubscribe(uint64_t signature, uint16_t id, void (*callback)(CanardR
 
     node.subscribers[node.number_of_subs].signature = signature;
     node.subscribers[node.number_of_subs].id = id;
+    node.subscribers[node.number_of_subs].transfer_type = CanardTransferTypeBroadcast;
     node.subscribers[node.number_of_subs].callback = callback;
     return node.number_of_subs++;
+}
+
+static int8_t subscribeRequest(uint64_t signature, uint16_t id, void (*callback)(CanardRxTransfer *))
+{
+    const int8_t index = uavcanSubscribe(signature, id, callback);
+    if (index >= 0)
+    {
+        node.subscribers[index].transfer_type = CanardTransferTypeRequest;
+    }
+    return index;
 }
 
 int16_t uavcanPublish(uint64_t data_type_signature,
@@ -234,12 +246,13 @@ const NodeStatus_t *uavcanGetNodeStatus()
 static bool shouldAcceptTransfer(__attribute__((unused)) const CanardInstance *ins,
                                  uint64_t *out_data_type_signature,
                                  uint16_t data_type_id,
-                                 __attribute__((unused)) CanardTransferType transfer_type,
+                                 CanardTransferType transfer_type,
                                  __attribute__((unused)) uint8_t source_node_id)
 {
     for (uint8_t sub_idx = 0; sub_idx < node.number_of_subs; sub_idx++)
     {
-        if (data_type_id == node.subscribers[sub_idx].id)
+        if (data_type_id == node.subscribers[sub_idx].id &&
+            transfer_type == node.subscribers[sub_idx].transfer_type)
         {
             *out_data_type_signature = node.subscribers[sub_idx].signature;
             return true;
@@ -258,7 +271,8 @@ static void onTransferReceived(__attribute__((unused)) CanardInstance *ins,
 {
     for (uint8_t sub_idx = 0; sub_idx < node.number_of_subs; sub_idx++)
     {
-        if (transfer->data_type_id == node.subscribers[sub_idx].id)
+        if (transfer->data_type_id == node.subscribers[sub_idx].id &&
+            transfer->transfer_type == node.subscribers[sub_idx].transfer_type)
         {
             transfer->sub_id = sub_idx;
             node.subscribers[sub_idx].callback(transfer);
@@ -507,13 +521,13 @@ int16_t uavcanInitApplication(ParamsApi params_api, PlatformApi platform_api, co
 
     platform.readUniqueId(node.hw_version.unique_id);
 
-    uavcanSubscribe(UAVCAN_GET_NODE_INFO_DATA_TYPE, uavcanProtocolGetNodeInfoHandle);
-    uavcanSubscribe(UAVCAN_PROTOCOL_PARAM_GETSET, uavcanProtocolParamGetSetHandle);
-    uavcanSubscribe(UAVCAN_PROTOCOL_PARAM_EXECUTEOPCODE, uavcanParamExecuteOpcodeHandle);
-    uavcanSubscribe(UAVCAN_PROTOCOL_RESTART_NODE, uavcanProtocolRestartNodeHandle);
-    uavcanSubscribe(UAVCAN_PROTOCOL_GET_TRANSPORT_STATS, uavcanProtocolGetTransportStatHandle);
+    subscribeRequest(UAVCAN_GET_NODE_INFO_DATA_TYPE, uavcanProtocolGetNodeInfoHandle);
+    subscribeRequest(UAVCAN_PROTOCOL_PARAM_GETSET, uavcanProtocolParamGetSetHandle);
+    subscribeRequest(UAVCAN_PROTOCOL_PARAM_EXECUTEOPCODE, uavcanParamExecuteOpcodeHandle);
+    subscribeRequest(UAVCAN_PROTOCOL_RESTART_NODE, uavcanProtocolRestartNodeHandle);
+    subscribeRequest(UAVCAN_PROTOCOL_GET_TRANSPORT_STATS, uavcanProtocolGetTransportStatHandle);
     uavcanSubscribe(UAVCAN_PROTOCOL_NODE_STATUS, uavcanProtocolNodeStatusHandle);
-    uavcanSubscribe(UAVCAN_PROTOCOL_FILE_BEGINFIRMWAREUPDATE_SIGNATURE,
+    subscribeRequest(UAVCAN_PROTOCOL_FILE_BEGINFIRMWAREUPDATE_SIGNATURE,
                     UAVCAN_PROTOCOL_FILE_BEGINFIRMWAREUPDATE_ID,
                     uavcanProtocolBeginFirmwareUpdateHandle);
 
