@@ -31,7 +31,7 @@ void canDriverHandleRxInterrupt(void) {
     if (!rx_interrupt_enabled) {
         return;
     }
-    // Bound ISR work even when more frames arrive while draining FIFO0.
+    // Bound ISR work even when more frames arrive while draining the hardware FIFOs.
     for (unsigned i = 0; i < 3U; ++i) {
         CanardCANFrame frame = {0};
         if (canardSTM32Receive(&frame) <= 0) {
@@ -80,13 +80,14 @@ int16_t canDriverInit(uint32_t can_speed, uint8_t can_driver_idx) {
 
 int16_t canDriverReceive(CanardCANFrame* const rx_frame, uint8_t can_driver_idx) {
     (void)can_driver_idx;
-    if (!rx_interrupt_enabled) {
-        return canardSTM32Receive(rx_frame);
-    }
     if (rx_frame == NULL) {
         return -CANARD_ERROR_INVALID_ARGUMENT;
     }
     const uint32_t mask = lockInterrupts();
+    if (rx_interrupt_enabled) {
+        rx_interrupt_enabled = canDriverConfigureRxInterrupt(true);
+    }
+    const bool polling = !rx_interrupt_enabled;
     const int16_t result = rx_count != 0;
     if (result) {
         *rx_frame = rx_queue[rx_tail];
@@ -94,7 +95,8 @@ int16_t canDriverReceive(CanardCANFrame* const rx_frame, uint8_t can_driver_idx)
         --rx_count;
     }
     __set_PRIMASK(mask);
-    return result;
+    // Preserve queued frames before reading hardware after a polling fallback.
+    return (result || !polling) ? result : canardSTM32Receive(rx_frame);
 }
 
 int16_t canDriverTransmit(const CanardCANFrame* const tx_frame, uint8_t can_driver_idx) {

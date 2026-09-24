@@ -40,12 +40,13 @@ Number of subscribers is limited by parameter `DRONECAN_MAX_SUBS_NUMBER` in file
 ### bxCAN receive integration
 
 The existing `PlatformApi.can` hooks (`init`, `recv`, `send`, and counters) support both receive modes without changing protocol callbacks.
-A board can provide `canDriverConfigureRxInterrupt(bool enabled)` from [can_rx_irq.h](platform_specific/bxcan/can_rx_irq.h) and call `canDriverHandleRxInterrupt()` from its RX callback.
-With CubeMX, enable the matching FIFO IRQ in the `.ioc`, regenerate, and implement the HAL FIFO message-pending callback; keep NVIC enablement and priority in generated code.
-The driver calls the board hook with `false` before reinitializing CAN and with `true` after successful initialization.
-The hook runs with CPU interrupts masked, must not wait, and returns `true` only if it enabled all required RX interrupt sources.
-If the hook is absent or returns `false`, reception uses polling; a false return must leave those sources disabled.
-Interrupt mode is selected during initialization, never inferred from traffic activity or NVIC configuration alone.
+The STM32F103 adapter in [can_rx_irq.c](platform_specific/bxcan/can_rx_irq.c) uses `CANARD_STM32_USE_CAN2`, active filter routing, and CubeMX's NVIC configuration to select receive notifications.
+Every FIFO used by the selected controller needs an enabled IRQ; when both are used, their priorities must match.
+CubeMX must generate the corresponding handlers calling `HAL_CAN_IRQHandler`; the adapter supplies both FIFO message-pending callbacks.
+NVIC enablement and priority remain owned by CubeMX.
+The platform hook runs with CPU interrupts masked, after initialization and before dequeueing in IRQ mode, so later filter or NVIC changes can trigger polling fallback.
+On fallback, RX notifications are disabled and existing queued frames are consumed before polling hardware; IRQ mode is reconsidered only on driver reinitialization.
+Platforms without the adapter use the weak hook and retain polling.
 
 The ISR copies at most three complete frames into a fixed 64-frame queue and drops the newest frame when full.
 `recv` dequeues frames in the main loop, where DroneCAN decoding and application callbacks still run.
